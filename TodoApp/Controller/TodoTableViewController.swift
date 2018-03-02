@@ -12,8 +12,10 @@ import RealmSwift
 
 class TodoTableViewController: UITableViewController {
     
+    // Realm var for easy access
     var realm: Realm!
     
+    // Todo list that will store the todo items
     var toDoList: Results<ToDoListItem> {
         
         get {
@@ -24,6 +26,7 @@ class TodoTableViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        // Init realm
         realm = try! Realm()
         
     }
@@ -33,7 +36,7 @@ class TodoTableViewController: UITableViewController {
 
     override func numberOfSections(in tableView: UITableView) -> Int {
         
-        // When the todo array is empty, display the placeholder
+        // When the todo list is empty, display the placeholder
         
         if toDoList.count == 0 {
             
@@ -72,7 +75,7 @@ class TodoTableViewController: UITableViewController {
     
     @IBAction func addItem(_ sender: UIBarButtonItem) {
         
-        // Creating an alert with a textfield and an Add button
+        // Creating an alert with a textfield and Add/Cancel actions
         let alert = UIAlertController(title: "Add Item", message: "What do you want to do?", preferredStyle: .alert)
         
         alert.addTextField { (textField) in
@@ -115,14 +118,12 @@ class TodoTableViewController: UITableViewController {
         
         cell.textLabel?.text = item.name
         
-        //Ternary operator - basically an if-selse statement
+        //Ternary operator - basically an if-else statement
         cell.accessoryType = item.done == true ? .checkmark : .none
 
         return cell
         
     }
-    
-    // Add a checkmark to selected todo item cells and remove when tapped on again
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
@@ -143,6 +144,7 @@ class TodoTableViewController: UITableViewController {
     
     
     // Override to support editing the table view.
+    
     override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCellEditingStyle, forRowAt indexPath: IndexPath) {
         if editingStyle == .delete {
             
