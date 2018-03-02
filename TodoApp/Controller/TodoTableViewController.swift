@@ -7,17 +7,24 @@
 //
 
 import UIKit
+import RealmSwift
 
-// TodoField to be used in adding item to list
-var todoField: UITextField?
-
-// TodoArray used for storing the todo items
-var todosArray = [String]()
 
 class TodoTableViewController: UITableViewController {
     
+    var realm: Realm!
+    
+    var toDoList: Results<ToDoListItem> {
+        
+        get {
+            return realm.objects(ToDoListItem.self)
+        }
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        realm = try! Realm()
         
     }
 
@@ -28,7 +35,7 @@ class TodoTableViewController: UITableViewController {
         
         // When the todo array is empty, display the placeholder
         
-        if todosArray.count == 0 {
+        if toDoList.count == 0 {
             
             // Placeholder creation, displayed when the tableView is empty
             let placeholderTitle = UILabel(frame: CGRect(x: 0, y: 0, width: 200, height: 21))
@@ -58,7 +65,7 @@ class TodoTableViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         
         // Return the number of items in the todoArray as number of rows
-        return todosArray.count
+        return toDoList.count
     }
     
     
@@ -66,40 +73,50 @@ class TodoTableViewController: UITableViewController {
     @IBAction func addItem(_ sender: UIBarButtonItem) {
         
         // Creating an alert with a textfield and an Add button
-        let alert = UIAlertController(title: "Add Item", message: "Insert a todo item:", preferredStyle: .alert)
-        let okButton = UIAlertAction(title: "Add", style: .default) { (okButton) in
-            self.addToList()
-        }
+        let alert = UIAlertController(title: "Add Item", message: "What do you want to do?", preferredStyle: .alert)
         
-        // Create the todo textfield for the alert
-        let textField = UITextField()
-        textField.placeholder = "Eg. Work"
-        
-        // Add both the Add button and textfield into the alert
-        alert.addAction(okButton)
         alert.addTextField { (textField) in
-            todoField = textField
+            textField.placeholder = "E.g. Feed the cat"
         }
+        
+        let cancelAction = UIAlertAction(title: "Cancel", style: .destructive, handler: nil)
+        alert.addAction(cancelAction)
+        
+        let addAction = UIAlertAction(title: "Add", style: .default) { (UIAlertAction) -> Void in
+            
+            let todoItemTextField = (alert.textFields?.first)! as UITextField
+            
+            let newToDoListItem = ToDoListItem()
+            newToDoListItem.name = todoItemTextField.text!
+            newToDoListItem.done = false
+            
+            try! self.realm.write({
+                
+                self.realm.add(newToDoListItem)
+            })
+            
+            self.tableView.insertRows(at: [IndexPath.init(row: self.toDoList.count - 1, section: 0)], with: .automatic)
+
+        }
+        alert.addAction(addAction)
         
         // Present the alert
         present(alert, animated: true, completion: nil)
-        
-        
+  
     }
     
-    // Function to add the todo item to the array and update tableView to show it
-    
-    func addToList() {
-        todosArray.append((todoField?.text!)!)
-        self.tableView.reloadData()
-    }
     
     // Create cells with text label showing the todo items in array
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "TodoCell", for: indexPath)
         
-        cell.textLabel?.text = todosArray[indexPath.item]
+        let item = toDoList[indexPath.row]
+        
+        cell.textLabel?.text = item.name
+        
+        //Ternary operator - basically an if-selse statement
+        cell.accessoryType = item.done == true ? .checkmark : .none
 
         return cell
         
@@ -109,29 +126,36 @@ class TodoTableViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
-        if tableView.cellForRow(at: indexPath)?.accessoryType == UITableViewCellAccessoryType.checkmark {
-            tableView.cellForRow(at: indexPath)?.accessoryType = UITableViewCellAccessoryType.none
-            tableView.cellForRow(at: indexPath)?.isSelected = false
-        } else {
-            tableView.cellForRow(at: indexPath)?.accessoryType = UITableViewCellAccessoryType.checkmark
-            tableView.cellForRow(at: indexPath)?.isSelected = true
-        }
+        let item = toDoList[indexPath.row]
+        
+        try! self.realm.write ({
+            item.done = !item.done
+        })
+        
+        tableView.reloadRows(at: [indexPath], with: .automatic)
         
     }
+    
+    override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
+        return true
+    }
+    
     
     
     // Override to support editing the table view.
     override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCellEditingStyle, forRowAt indexPath: IndexPath) {
         if editingStyle == .delete {
-            // Delete the row from the data source
-            todosArray.remove(at: indexPath.row)
             
-            // Delete the row from the tableView
-            tableView.deleteRows(at: [indexPath], with: .fade)
+            let item = toDoList[indexPath.row]
+            
+            try! self.realm.write({
+                
+                self.realm.delete(item)
+            })
+            
+            tableView.deleteRows(at: [indexPath], with: .automatic)
+            
         }
-        
-        // Reload the data in the table
-        tableView.reloadData()
     }
     
 }
